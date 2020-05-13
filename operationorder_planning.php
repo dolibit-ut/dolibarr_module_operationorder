@@ -54,7 +54,7 @@ if($res>0 && $statusAllowed->userCan($user, 'changeToThisStatus')){
 
 ?>
     <script>
-
+		storedFullcalendarZoom = sessionStorage.getItem('fullcalendarZoom') || 1.5;
 		operationOrderInterfaceUrl = "<?php print dol_buildpath('/operationorder/scripts/interface.php', 1); ?>?action=getPlannedOperationOrder";
 		fullcalendarscheduler_initialLangCode = "<?php print !empty($conf->global->FULLCALENDARSCHEDULER_LOCALE_LANG) ? $conf->global->FULLCALENDARSCHEDULER_LOCALE_LANG : $langjs; ?>";
 		fullcalendarscheduler_snapDuration = "<?php print !empty($conf->global->FULLCALENDARSCHEDULER_SNAP_DURATION) ? $conf->global->FULLCALENDARSCHEDULER_SNAP_DURATION : '00:15:00'; ?>";
@@ -82,7 +82,7 @@ if($res>0 && $statusAllowed->userCan($user, 'changeToThisStatus')){
 				weekNumbersWithinDays: true,
 				weekNumberCalculation: 'ISO',
 				header: {
-					left: 'prev,next today',
+					left: 'prev,next today zoomOut,zoomIn',
 					center: 'title',
 					right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
 				},
@@ -93,6 +93,7 @@ if($res>0 && $statusAllowed->userCan($user, 'changeToThisStatus')){
 				scrollTime: '10:00:00',
 				height: getFullCalendarHeight(), //
 				selectMirror: true,
+				expandRows: true, // for fullcalendar v5
 				locale: fullcalendarscheduler_initialLangCode,
 				eventLimit: true, // allow "more" link when too many events
                 editable:true,
@@ -236,7 +237,42 @@ if($res>0 && $statusAllowed->userCan($user, 'changeToThisStatus')){
                         }
                     });
 
-                }
+                },
+				'windowResize': function(view) {
+					calendar.setOption('height', getFullCalendarHeight());
+				},
+				buttonIcons:{
+					zoomOut: 'disabled fa fa-search-minus',
+					zoomIn: 'disabled fa fa-search-plus',
+				},
+				customButtons: {
+					// TODO : update fullcalendar to V5 to auto size height see expandRows
+					zoomOut: {
+						text: 'ZoomOut',
+						click: function() {
+
+							storedFullcalendarZoom = parseFloat(storedFullcalendarZoom) + 0.1;
+							if(storedFullcalendarZoom > 3){
+								storedFullcalendarZoom = 3;
+							}
+							calendar.setOption('aspectRatio', storedFullcalendarZoom);
+							sessionStorage.setItem('fullcalendarZoom', storedFullcalendarZoom);
+							console.log(storedFullcalendarZoom);
+						}
+					},
+					zoomIn: {
+						text: 'ZoomIn',
+						click: function() {
+							storedFullcalendarZoom = parseFloat(storedFullcalendarZoom)  - 0.1;
+							if(storedFullcalendarZoom < 0.1){
+								storedFullcalendarZoom = 0.1;
+							}
+
+							calendar.setOption('aspectRatio', storedFullcalendarZoom);
+							sessionStorage.setItem('fullcalendarZoom', storedFullcalendarZoom);
+						}
+					}
+				},
             });
 
 			// refresh event on modal close
@@ -245,10 +281,6 @@ if($res>0 && $statusAllowed->userCan($user, 'changeToThisStatus')){
 			});
 
 			calendar.render();
-
-			$(window).on('resize', function(){
-				calendar.setOption('height', getFullCalendarHeight());
-			});
 
 			// function newEventModal(start, end = 0){
 			// 	// console.log(start);
@@ -307,6 +339,13 @@ if($res>0 && $statusAllowed->userCan($user, 'changeToThisStatus')){
 
         });
     </script>
+	<style >
+		.fc-icon.fc-icon-disabled.fa{
+			font-family: "Font Awesome 5 Free" !important;
+			font-weight: 900;
+			font-size: 1em;
+		}
+	</style>
 <?php
 print '<div id="calendar"></div>';
 print '<div id="dialog-add-event" title="'.$langs->trans('CreateNewORAction').'"></div>';
